@@ -28,3 +28,9 @@ Built locally for EurekaDev 2026. Nothing has been published or submitted extern
 
 ## Demo video
 https://youtu.be/cEM0U3uLMjc
+
+## AI Assistance Disclosure
+This project was developed during EurekaDev 2026 with AI-assisted coding and writing support from ChatGPT. The project concept, competition entry, testing decisions, and final submission are owned and directed by Zaky. AI assistance was used to accelerate implementation, debugging, documentation, and test generation. The repository intentionally includes deterministic tests and a transparent inference core so judges can inspect the implemented logic.
+
+## Competition
+Built during the EurekaDev 2026 hackathon window for the Coding Track, Computer Science + AI (Technology) category.
