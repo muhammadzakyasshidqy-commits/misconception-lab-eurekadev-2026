@@ -1,4 +1,4 @@
-﻿(function(root,factory){
+(function(root,factory){
   if(typeof module==="object"&&module.exports){module.exports=factory();}
   else{root.MisconceptionEngine=factory();}
 })(typeof self!=="undefined"?self:this,function(){
@@ -25,6 +25,30 @@
     const confidence=sum? r[0][1]/sum:0;
     return {cause:top,label:LABELS[top],test:TESTS[top],posteriorShare:confidence};
   }
-  function serialize(state){return JSON.stringify({schema:1,state},null,2)}
-  return {LABELS,TESTS,empty,evidence,record,ranked,recommendation,serialize};
+  function byTopic(state){
+    const out={};
+    state.events.forEach(function(e){
+      if(!out[e.topic])out[e.topic]={events:0,evidence:0,causes:{concept:0,procedure:0,attention:0,confidence:0}};
+      out[e.topic].events+=1;
+      out[e.topic].evidence+=e.evidence;
+      out[e.topic].causes[e.cause]+=e.evidence;
+    });
+    return out;
+  }
+  function instructorInsight(state){
+    if(!state.events.length)return {events:0,topTopic:null,dominantCause:null,dominantLabel:null,intervention:"Collect a few learner errors first."};
+    const topics=byTopic(state);
+    const topTopic=Object.entries(topics).sort(function(a,b){return b[1].evidence-a[1].evidence})[0][0];
+    const rec=recommendation(state);
+    return {
+      events:state.events.length,
+      topTopic:topTopic,
+      dominantCause:rec.cause,
+      dominantLabel:rec.label,
+      evidenceShare:rec.posteriorShare,
+      intervention:TESTS[rec.cause]
+    };
+  }
+  function serialize(state){return JSON.stringify({schema:2,state},null,2)}
+  return {LABELS,TESTS,empty,evidence,record,ranked,recommendation,byTopic,instructorInsight,serialize};
 });

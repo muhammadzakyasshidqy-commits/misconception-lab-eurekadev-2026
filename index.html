@@ -1,34 +1,49 @@
-﻿<!doctype html>
+<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Misconception Lab</title>
 <style>
-body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:0}
-main{max-width:980px;margin:auto;padding:32px}
+:root{color-scheme:dark}
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#0d1117;color:#e6edf3;margin:0}
+main{max-width:1040px;margin:auto;padding:32px}
 .card{background:#161b22;border:1px solid #30363d;border-radius:16px;padding:20px;margin:14px 0}
-h1{font-size:42px;margin:0 0 8px}
+h1{font-size:44px;margin:0 0 8px} h2{margin-top:0}
+.hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.badge{padding:8px 12px;border:1px solid #3fb950;border-radius:999px;white-space:nowrap}
 input,select,button{padding:11px;border-radius:10px;border:1px solid #30363d;background:#0d1117;color:#e6edf3}
 button{background:#238636;font-weight:700;cursor:pointer}
+button.secondary{background:#21262d}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .node{display:inline-block;padding:8px 10px;border-radius:999px;background:#21262d;margin:4px}
 .bad{border:1px solid #f85149}.mid{border:1px solid #d29922}.good{border:1px solid #3fb950}
 .small{color:#8b949e;font-size:13px}
 #history div{padding:8px 0;border-bottom:1px solid #21262d}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.metric{font-size:28px;font-weight:800}
+.teacher{border-color:#58a6ff}
+table{width:100%;border-collapse:collapse} td,th{text-align:left;padding:9px;border-bottom:1px solid #30363d}
+.plan{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.plan>div{background:#0d1117;border:1px solid #30363d;border-radius:12px;padding:14px}
+@media(max-width:760px){.grid,.plan{grid-template-columns:1fr}.hero{display:block}.badge{display:inline-block;margin-top:8px}}
 </style>
 </head>
 <body>
 <main>
-<h1>Misconception Lab</h1>
-<p>Instead of tracking only right/wrong answers, this prototype tracks the hidden reason a learner failed and chooses the next question to discriminate between competing misconceptions.</p>
+<div class="hero">
+  <div>
+    <h1>Misconception Lab</h1>
+    <p>Diagnose why a learner is wrong, not just whether they are wrong.</p>
+  </div>
+  <span class="badge">Learner + Instructor prototype</span>
+</div>
+
 <div class="card">
 <h2>Record an error</h2>
 <div class="row">
 <select id="topic">
-<option>Probability</option>
-<option>Algebra</option>
-<option>Reading inference</option>
+<option>Probability</option><option>Algebra</option><option>Reading inference</option>
 </select>
 <select id="cause">
 <option value="concept">Wrong concept selected</option>
@@ -38,13 +53,39 @@ button{background:#238636;font-weight:700;cursor:pointer}
 </select>
 <input id="confidence" type="number" min="0" max="100" value="50" aria-label="confidence">
 <button id="analyze">Analyze</button>
-<button id="export">Export JSON</button>
+<button id="sample" class="secondary">Load sample classroom</button>
+<button id="export" class="secondary">Export JSON</button>
 </div>
-<p class="small">Confidence is 0–100%. The engine converts each error into evidence, not just a score penalty.</p>
+<p class="small">Confidence is 0–100%. Lower confidence creates stronger diagnostic evidence because the learner is less certain.</p>
 </div>
-<div class="card"><h2>Misconception graph</h2><div id="graph"></div></div>
-<div class="card"><h2>Next best test</h2><div id="next">Add an error first.</div></div>
+
+<div class="grid">
+  <div class="card"><h2>Misconception graph</h2><div id="graph"></div></div>
+  <div class="card"><h2>Next best test</h2><div id="next">Add an error first.</div></div>
+</div>
+
+<div class="card teacher">
+<h2>Instructor insight</h2>
+<div class="grid">
+  <div><div class="small">Evidence events</div><div class="metric" id="eventCount">0</div></div>
+  <div><div class="small">Priority topic</div><div class="metric" id="priorityTopic">—</div></div>
+</div>
+<p id="teacherSummary">Collect a few learner errors first.</p>
+<table><thead><tr><th>Topic</th><th>Events</th><th>Evidence</th></tr></thead><tbody id="topicTable"></tbody></table>
+</div>
+
 <div class="card"><h2>Evidence history</h2><div id="history"></div></div>
+
+<div class="card">
+<h2>Path to a real product</h2>
+<div class="plan">
+  <div><b>Free learner</b><p class="small">Personal diagnosis, local history, export.</p></div>
+  <div><b>Educator</b><p class="small">Class-level misconception trends and intervention queue.</p></div>
+  <div><b>School/API</b><p class="small">LMS integration, longitudinal analytics, privacy controls.</p></div>
+</div>
+<p class="small">Business model shown here is a proposed go-to-market direction for the prototype, not current revenue.</p>
+</div>
+
 <script src="core.js"></script>
 <script>
 let state=MisconceptionEngine.empty();
@@ -52,20 +93,25 @@ try{
  const saved=JSON.parse(localStorage.getItem("misconception-lab")||"null");
  if(saved&&saved.weights&&saved.events)state=saved;
 }catch(e){}
+function persist(){localStorage.setItem("misconception-lab",JSON.stringify(state))}
 function addError(){
- const topic=document.getElementById("topic").value;
- const cause=document.getElementById("cause").value;
- const confidence=document.getElementById("confidence").value;
- MisconceptionEngine.record(state,topic,cause,confidence);
- localStorage.setItem("misconception-lab",JSON.stringify(state));
- render();
+ MisconceptionEngine.record(state,document.getElementById("topic").value,document.getElementById("cause").value,document.getElementById("confidence").value);
+ persist();render();
+}
+function loadSample(){
+ state=MisconceptionEngine.empty();
+ [
+  ["Probability","concept",20],["Probability","concept",35],["Probability","attention",70],
+  ["Algebra","procedure",40],["Algebra","procedure",55],["Reading inference","attention",30],
+  ["Reading inference","confidence",25]
+ ].forEach(function(x){MisconceptionEngine.record(state,x[0],x[1],x[2])});
+ persist();render();
 }
 function render(){
  const labels=MisconceptionEngine.LABELS;
  const max=Math.max(1,...Object.values(state.weights));
  document.getElementById("graph").innerHTML=Object.entries(state.weights).map(function(kv){
-   const k=kv[0],v=kv[1],ratio=v/max;
-   const cls=ratio>0.66?"bad":ratio>0.33?"mid":"good";
+   const k=kv[0],v=kv[1],ratio=v/max,cls=ratio>0.66?"bad":ratio>0.33?"mid":"good";
    return '<span class="node '+cls+'">'+labels[k]+': '+v.toFixed(2)+'</span>';
  }).join("");
  if(state.events.length){
@@ -75,11 +121,23 @@ function render(){
  document.getElementById("history").innerHTML=state.events.map(function(e){
    return '<div><b>'+e.topic+'</b> — '+labels[e.cause]+' — confidence '+e.confidence+'% — evidence +'+e.evidence.toFixed(2)+'</div>';
  }).join("")||'<span class="small">No evidence yet.</span>';
+
+ const insight=MisconceptionEngine.instructorInsight(state);
+ document.getElementById("eventCount").textContent=insight.events;
+ document.getElementById("priorityTopic").textContent=insight.topTopic||"—";
+ document.getElementById("teacherSummary").textContent=insight.dominantLabel
+   ? "Dominant signal: "+insight.dominantLabel+". Recommended intervention: "+insight.intervention
+   : insight.intervention;
+ const topics=MisconceptionEngine.byTopic(state);
+ document.getElementById("topicTable").innerHTML=Object.entries(topics).sort(function(a,b){return b[1].evidence-a[1].evidence}).map(function(kv){
+   return "<tr><td>"+kv[0]+"</td><td>"+kv[1].events+"</td><td>"+kv[1].evidence.toFixed(2)+"</td></tr>";
+ }).join("")||'<tr><td colspan="3" class="small">No evidence yet.</td></tr>';
 }
 document.getElementById("analyze").addEventListener("click",addError);
+document.getElementById("sample").addEventListener("click",loadSample);
 document.getElementById("export").addEventListener("click",function(){
  const blob=new Blob([MisconceptionEngine.serialize(state)],{type:"application/json"});
- const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="misconception-lab.json"; a.click(); URL.revokeObjectURL(a.href);
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="misconception-lab.json";a.click();URL.revokeObjectURL(a.href);
 });
 render();
 </script>
